@@ -1,0 +1,23 @@
+{
+  "name": "daw-mcp-server",
+  "version": "0.7.0",
+  "description": "MCP server for controlling DAWs (Bitwig Studio, Ableton Live)",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "bundle": "esbuild src/index.ts --bundle --minify --platform=node --format=esm --outfile=dist/mcp-server.js --external:net --external:fs --external:path --external:os",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "tonal": "^6.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -1,0 +1,46 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.pxaudio'
+version = '1.0.0'
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://maven.bitwig.com'
+    }
+}
+
+dependencies {
+    // Bitwig Extension API - provided by Bitwig at runtime
+    compileOnly 'com.bitwig:extension-api:18'
+
+    // JSON processing - will be bundled in the extension
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+jar {
+    baseName = 'daw-mcp'
+    extension = 'bwextension'
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+
+    manifest {
+        attributes(
+            'Extension-Class': 'com.pxaudio.bitwigmcp.BitwigMCPExtensionDefinition'
+        )
+    }
+}
+
+// Create extension directory structure
+task copyExtension(type: Copy) {
+    dependsOn jar
+    from jar.outputs.files
+    into "${System.getProperty('user.home')}/Bitwig Studio/Extensions"
+}

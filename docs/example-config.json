@@ -1,0 +1,47 @@
+{
+  "defaultDaw": "bitwig",
+
+  "bitwig": {
+    "port": 8181,
+    "gridResolution": 16,
+    "cursorClipLengthBeats": 128,
+    "scenes": 128
+  },
+
+  "ableton": {
+    "port": 8182
+  },
+
+  "mcp": {
+    "selectionDelayMs": 400,
+    "requestTimeoutMs": 10000
+  },
+
+  "tools": {
+    "_comment": "Tools listed below show their DEFAULT values. Only add entries to override defaults.",
+
+    "_enabled_by_default": "These tools are enabled unless you set them to false:",
+    "get_daws": true,
+    "get_project_info": true,
+    "list_tracks": true,
+    "batch_list_clips": true,
+    "batch_create_clips": true,
+    "batch_delete_clips": true,
+    "batch_create_euclid_patterns": true,
+    "set_clip_length": true,
+    "batch_get_notes": true,
+    "batch_set_notes": true,
+    "batch_clear_notes": true,
+    "batch_operations": true,
+
+    "_disabled_by_default": "These tools are DISABLED unless you set them to true:",
+    "batch_move_notes": false,
+    "batch_set_note_properties": false,
+    "transpose_clip": false,
+    "transpose_range": false,
+    "batch_create_tracks": false,
+    "batch_delete_tracks": false,
+    "batch_set_track_properties": false,
+    "transport_set_position": false
+  }
+}
