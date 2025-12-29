@@ -28,7 +28,7 @@ New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
 # 1. Build Bitwig extension
 Write-Host "Building Bitwig extension..." -ForegroundColor Yellow
 Push-Location "bitwig-extension"
-& gradle build -q
+& cmd /c "gradle build -q"
 if ($LASTEXITCODE -ne 0) { throw "Gradle build failed" }
 Copy-Item "build\libs\*.bwextension" "..\$ReleaseDir\BitwigMCP.bwextension"
 Pop-Location
@@ -36,7 +36,7 @@ Pop-Location
 # 2. Bundle MCP server
 Write-Host "Bundling MCP server..." -ForegroundColor Yellow
 Push-Location "mcp-server"
-& npm run bundle --silent
+& cmd /c "npm run bundle --silent"
 if ($LASTEXITCODE -ne 0) { throw "npm bundle failed" }
 Copy-Item "dist\mcp-server.js" "..\$ReleaseDir\"
 Pop-Location
