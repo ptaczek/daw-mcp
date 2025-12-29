@@ -70,7 +70,7 @@ Download the latest release ZIP from [Releases](../../releases) and extract it s
 
 You'll get:
 ```
-daw-mcp/
+daw-mcp-0.8.2/
 ├── BitwigMCP.bwextension    # Bitwig extension
 ├── AbletonMCP/              # Ableton Remote Script folder
 ├── mcp-server.js            # The bridge (runs on Node.js)
@@ -90,7 +90,7 @@ Copy `BitwigMCP.bwextension` to your extensions folder:
 | **macOS** | `~/Documents/Bitwig Studio/Extensions/` |
 | **Linux** | `~/Bitwig Studio/Extensions/` |
 
-Then in Bitwig: **Settings → Controllers → + Add Controller → search "Bitwig MCP Bridge"**
+Then in Bitwig: **Settings → Controllers → + Add Controller → select "PX-Audio" → Bitwig MCP Bridge**
 
 You should see: *"Bitwig MCP Bridge started on port 8181"*
 
