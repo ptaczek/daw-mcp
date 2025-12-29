@@ -122,31 +122,61 @@ Edit your Claude Desktop config file:
 
 Add this (create the file if it doesn't exist):
 
+**macOS / Linux:**
 ```json
 {
   "mcpServers": {
     "daw": {
       "command": "node",
-      "args": ["/full/path/to/mcp-server.js"]
+      "args": ["/full/path/to/mcp-server.js"],
+      "transport": "stdio"
     }
   }
 }
 ```
 
-Replace `/full/path/to/` with the actual path where you extracted the files.
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "daw": {
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\YOU\\path\\to\\mcp-server.js"],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+Replace the path with the actual location where you extracted the files.
 
 Restart Claude Desktop. You should see a hammer icon indicating MCP tools are available.
 
 #### Claude Code (For developers)
 
-Add to `~/.claude.json` or your project's `.claude/settings.json`:
+Add to your Claude Code settings (`~/.claude.json` or project's `.claude/settings.json`):
 
+**macOS / Linux:**
 ```json
 {
   "mcpServers": {
     "daw": {
       "command": "node",
-      "args": ["/full/path/to/mcp-server.js"]
+      "args": ["/full/path/to/mcp-server.js"],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "daw": {
+      "command": "cmd",
+      "args": ["/c", "node", "C:\\Users\\YOU\\path\\to\\mcp-server.js"],
+      "transport": "stdio"
     }
   }
 }
