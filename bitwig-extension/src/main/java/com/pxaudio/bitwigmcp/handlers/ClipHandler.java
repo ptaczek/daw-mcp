@@ -122,6 +122,8 @@ public class ClipHandler {
                 return findEmptySlots(params);
             case "getSceneCount":
                 return getSceneCount(params);
+            case "createScene":
+                return createScene(params);
 
             default:
                 throw new IllegalArgumentException("Unknown clip action: " + action);
@@ -521,6 +523,33 @@ public class ClipHandler {
      */
     private JsonElement getSceneCount(JsonObject params) {
         JsonObject result = new JsonObject();
+        result.addProperty("sceneCount", extension.getSceneCount());
+        return result;
+    }
+
+    /**
+     * Create new scene(s) at the end of the project.
+     * Used to expand the project when more clip slots are needed.
+     *
+     * Note: The returned sceneCount may be stale because Bitwig's observer
+     * callbacks run on the same thread as this handler. The MCP server
+     * adds a delay after this call to allow the observer to fire before
+     * retrying findEmptySlots.
+     */
+    private JsonElement createScene(JsonObject params) {
+        int count = params.has("count") ? params.get("count").getAsInt() : 1;
+
+        // Bitwig API: Project.createScene() creates a new scene at the end
+        for (int i = 0; i < count; i++) {
+            extension.getProject().createScene();
+        }
+
+        // Note: We don't poll here - observer callbacks can't fire while
+        // we're blocking this thread. The MCP server handles the delay.
+
+        JsonObject result = new JsonObject();
+        result.addProperty("success", true);
+        result.addProperty("created", count);
         result.addProperty("sceneCount", extension.getSceneCount());
         return result;
     }

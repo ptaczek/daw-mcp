@@ -13,6 +13,7 @@ public class BitwigMCPExtension extends ControllerExtension {
     private Transport transport;
     private Application application;
     private Arranger arranger;
+    private Project project;
     private TrackBank trackBank;
     private SceneBank sceneBank;
     private CursorTrack cursorTrack;
@@ -21,6 +22,9 @@ public class BitwigMCPExtension extends ControllerExtension {
     // Cached cursor position (updated via observers)
     private int selectedTrackIndex = -1;
     private int selectedSlotIndex = -1;
+
+    // Cached scene count (updated via observer, used for polling after createScene)
+    private volatile int cachedSceneCount = 0;
 
     protected BitwigMCPExtension(
             final BitwigMCPExtensionDefinition definition,
@@ -39,6 +43,7 @@ public class BitwigMCPExtension extends ControllerExtension {
         transport = host.createTransport();
         application = host.createApplication();
         arranger = host.createArranger();
+        project = host.getProject();
 
         // Create track bank with configurable sizes
         // Using createTrackBank with hasFlatTrackList=true to access tracks nested inside groups
@@ -47,7 +52,11 @@ public class BitwigMCPExtension extends ControllerExtension {
         // Get SceneBank for scene count detection
         // itemCount() returns actual project scene count, not bank window size
         sceneBank = trackBank.sceneBank();
-        sceneBank.itemCount().markInterested();
+        // Use observer to cache scene count - allows polling after createScene()
+        sceneBank.itemCount().addValueObserver(count -> {
+            cachedSceneCount = count;
+            host.println("[MCP] Scene count updated: " + count);
+        });
 
         cursorTrack = host.createCursorTrack("MCP_CURSOR", "MCP Cursor Track", config.getSends(), config.getScenes(), true);
 
@@ -187,7 +196,11 @@ public class BitwigMCPExtension extends ControllerExtension {
     }
 
     public int getSceneCount() {
-        return sceneBank.itemCount().get();
+        return cachedSceneCount;
+    }
+
+    public Project getProject() {
+        return project;
     }
 
     public int getClipSteps() {

@@ -4,6 +4,55 @@
 
 import { HandlerContext, BatchResult, sortNotes } from './index.js';
 import { toInternal, toUser, resolveClipIndices, slotHasContent, findEmptySlots } from '../helpers/index.js';
+import { DAWClientManager, DAWType } from '../daw-client.js';
+
+/**
+ * Find empty slots with auto-scene-creation.
+ * If not enough empty slots are found, creates the needed scenes and retries.
+ */
+async function findEmptySlotsWithAutoCreate(
+  dawManager: DAWClientManager,
+  daw: DAWType | undefined,
+  trackIndex: number,
+  startSlot: number,
+  count: number
+): Promise<{
+  emptySlots: number[];
+  found: number;
+  requested: number;
+  sceneCount: number;
+  scenesCreated: number;
+}> {
+  let emptyResult = await findEmptySlots(dawManager, daw, trackIndex, startSlot, count);
+  let scenesCreated = 0;
+
+  if (emptyResult.found < count) {
+    // Calculate how many more scenes we need
+    const scenesNeeded = count - emptyResult.found;
+
+    try {
+      const createResult = await dawManager.send('clip.createScene', {
+        count: scenesNeeded
+      }, daw) as { success: boolean; created: number; sceneCount: number };
+
+      if (createResult.success) {
+        scenesCreated = createResult.created;
+        // Small delay to allow Bitwig's observer to update scene count
+        // This happens in Node.js, giving Bitwig's event loop time to process
+        await new Promise(resolve => setTimeout(resolve, 50));
+        // Retry finding empty slots with the new scene count
+        emptyResult = await findEmptySlots(dawManager, daw, trackIndex, startSlot, count);
+      }
+    } catch {
+      // Scene creation failed - continue with what we have
+    }
+  }
+
+  return {
+    ...emptyResult,
+    scenesCreated
+  };
+}
 
 /** Handle batch_get_notes (multi-clip, single clip, or cursor clip) */
 export async function handleBatchGetNotes(ctx: HandlerContext): Promise<BatchResult> {
@@ -155,13 +204,13 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<Batch
 
   // If no clips array or empty, create one clip at first empty slot from cursor
   if (!clips || clips.length === 0) {
-    const emptyResult = await findEmptySlots(dawManager, daw, cursorTrack, cursorSlot, 1);
+    const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, cursorTrack, cursorSlot, 1);
     if (emptyResult.found === 0) {
       return {
         success: false,
         completed: 0,
         failed: 1,
-        errors: [{ index: 0, error: `No empty slots available. Scene count: ${emptyResult.sceneCount}` }],
+        errors: [{ index: 0, error: `No empty slots available even after attempting to create scenes. Scene count: ${emptyResult.sceneCount}` }],
         sceneCount: emptyResult.sceneCount
       };
     }
@@ -179,6 +228,7 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<Batch
       failed: errors.length,
       createdClips,
       sceneCount: emptyResult.sceneCount,
+      ...(emptyResult.scenesCreated > 0 && { scenesCreated: emptyResult.scenesCreated }),
       ...(errors.length > 0 && { errors })
     };
   }
@@ -212,12 +262,12 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<Batch
           await dawManager.send('clip.delete', { trackIndex, slotIndex }, daw);
         }
       } else {
-        // Mode A: Auto-find empty slot from cursor position
-        const emptyResult = await findEmptySlots(dawManager, daw, trackIndex, cursorSlot, 1);
+        // Mode A: Auto-find empty slot from cursor position (with auto-scene-creation)
+        const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, trackIndex, cursorSlot, 1);
         if (emptyResult.found === 0) {
           errors.push({
             index: i,
-            error: `No empty slots available from position ${toUser(cursorSlot)}. Scene count: ${emptyResult.sceneCount}`
+            error: `No empty slots available from position ${toUser(cursorSlot)} even after attempting to create scenes. Scene count: ${emptyResult.sceneCount}`
           });
           continue;
         }

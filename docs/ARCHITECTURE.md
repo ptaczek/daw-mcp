@@ -177,22 +177,21 @@ Features that are possible but not yet implemented:
 
 | Feature | Bitwig | Ableton | Priority |
 |---------|--------|---------|----------|
-| Scene count | Yes | **Missing** | High |
-| Create scene | **Missing** | **Missing** | High |
 | Transport stop | Yes | Missing | Medium |
 | Track select | Yes | Missing | Low |
 | Track pan/arm | Yes | Missing | Low |
+| Delete scene | Missing | Missing | Low |
 
-**Note:** Scene count and create scene are needed for `batch_create_clips` to reliably find empty slots. Bitwig has scene count; Ableton is missing it.
+**Note:** Scene count and create scene are now implemented in both DAWs. `batch_create_clips` automatically creates scenes when needed.
 
 ### What's Actually Needed
 
 Real-world usage has shown the essential feature set:
 
-**Essential (v1.0 target):**
-- Track: name, select
+**Essential (v1.0 target) - DONE:**
+- Track: name, select (done)
 - Clips: full MIDI note manipulation (done)
-- Scenes: count, create
+- Scenes: count, create (done)
 - Project: tempo/time signature read (done via `get_project_info`)
 
 **Nice-to-have:**
@@ -205,10 +204,6 @@ Real-world usage has shown the essential feature set:
 - Per-note transpose
 
 ## Future Enhancements
-
-**v1.0 priorities:**
-- Scene count (Ableton)
-- Create scene (both DAWs)
 
 **Later:**
 - Arrangement timeline operations

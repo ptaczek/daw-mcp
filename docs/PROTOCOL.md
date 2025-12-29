@@ -2,7 +2,7 @@
 
 JSON-RPC 2.0 protocol over TCP for communication between the MCP server and DAW extensions.
 
-> **Version 0.7.0** - Core MIDI note manipulation is fully implemented. Scene operations (count, create) are missing from both extensions and are the priority for v1.0. See Feature Parity section for details.
+> **Version 0.8.0** - Core MIDI note manipulation and scene operations fully implemented. Auto-scene-creation ensures clips can always be created even when no empty slots exist.
 
 ## Transport
 
@@ -418,7 +418,7 @@ Find empty slots in a track.
 }
 ```
 
-#### `clip.getSceneCount` (Bitwig only)
+#### `clip.getSceneCount`
 
 Get total scene count in project.
 
@@ -428,6 +428,27 @@ Get total scene count in project.
 ```json
 {
   "sceneCount": 16
+}
+```
+
+#### `clip.createScene`
+
+Create new scene(s) at the end of the project.
+
+**Params:**
+```json
+{
+  "count": 1
+}
+```
+- `count`: Number of scenes to create (default: 1)
+
+**Result:**
+```json
+{
+  "success": true,
+  "created": 1,
+  "sceneCount": 17
 }
 ```
 
@@ -838,8 +859,8 @@ This table distinguishes between what each DAW's API supports and what's current
 
 | Feature | Bitwig API | Bitwig MCP | Ableton API | Ableton MCP |
 |---------|------------|------------|-------------|-------------|
-| Scene count | Yes | Yes | Yes | **Not impl** |
-| Create scene | Yes | No | Yes | No |
+| Scene count | Yes | Yes | Yes | Yes |
+| Create scene | Yes | Yes | Yes | Yes |
 | Delete scene | Yes | No | Yes | No |
 
 **Legend:**
@@ -872,7 +893,7 @@ The MCP server provides higher-level batch operations that call these protocol m
 | `batch_clear_notes` | Multiple `clip.clearNote` or `clip.clearAllNotes` |
 | `batch_move_notes` | Multiple `clip.moveNote` calls |
 | `batch_set_note_properties` | Multiple `clip.setNote*` calls |
-| `batch_create_clips` | `clip.findEmptySlots` + multiple `clip.create` |
+| `batch_create_clips` | `clip.findEmptySlots` + `clip.createScene` (if needed) + multiple `clip.create` |
 | `batch_list_clips` | Multiple `clip.list` calls |
 | `get_clip_stats` | `clip.getNotes` + analysis |
 | `batch_create_euclid_pattern` | Pattern generation + `clip.create` + `clip.setNote` |

@@ -452,7 +452,7 @@ class ClipHandler(BaseHandler):
         """Find empty clip slots on a track."""
         track_index = params.get('trackIndex')
         count = params.get('count', 1)
-        start_from = params.get('startFrom', 0)
+        start_from = params.get('startSlot', params.get('startFrom', 0))
 
         if track_index is None:
             track = self.song.view.selected_track
@@ -478,6 +478,8 @@ class ClipHandler(BaseHandler):
         return {
             'trackIndex': track_index,
             'emptySlots': empty_slots,
+            'found': len(empty_slots),
+            'requested': count,
             'sceneCount': scene_count
         }
 
@@ -702,3 +704,28 @@ class ClipHandler(BaseHandler):
     def handle_setNoteMuted(self, params):
         """Set muted state of a single note."""
         return self._modify_note_property(params, 'muted', 'muted')
+
+    def handle_getSceneCount(self, params):
+        """Get the number of scenes in the project."""
+        return {'sceneCount': len(self.song.scenes)}
+
+    def handle_createScene(self, params):
+        """Create new scene(s) at the end of the project."""
+        count = params.get('count', 1)
+
+        try:
+            for _ in range(count):
+                # Live API: create_scene(index) - at end = len(scenes)
+                self.song.create_scene(len(self.song.scenes))
+
+            logger.info("Created %d scene(s), total now: %d", count, len(self.song.scenes))
+
+        except Exception as e:
+            logger.error("Error creating scene: %s", e)
+            raise
+
+        return {
+            'success': True,
+            'created': count,
+            'sceneCount': len(self.song.scenes)
+        }
