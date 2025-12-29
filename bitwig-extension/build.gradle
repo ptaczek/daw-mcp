@@ -5,8 +5,10 @@ plugins {
 group = 'com.pxaudio'
 version = '1.0.0'
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
 
 repositories {
     mavenCentral()
@@ -24,8 +26,8 @@ dependencies {
 }
 
 jar {
-    baseName = 'daw-mcp'
-    extension = 'bwextension'
+    archiveBaseName = 'daw-mcp'
+    archiveExtension = 'bwextension'
 
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
@@ -42,5 +44,5 @@ jar {
 task copyExtension(type: Copy) {
     dependsOn jar
     from jar.outputs.files
-    into "${System.getProperty('user.home')}/Bitwig Studio/Extensions"
+    into "${System.getProperty('user.home')}/Documents/Bitwig Studio/Extensions"
 }
