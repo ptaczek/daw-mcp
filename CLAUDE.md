@@ -2,6 +2,24 @@
 
 MCP server for controlling DAWs (Bitwig Studio, Ableton Live) from Claude.
 
+## Scope: Session View / Clip Launcher Only
+
+**This project intentionally targets only the clip launcher (Bitwig) / session view (Ableton) paradigm.** Arrangement view is out of scope.
+
+**Rationale:**
+- Clip launcher provides discrete, addressable units (track × slot) - ideal for AI-driven workflows
+- Arrangement view has continuous timeline addressing - fragile, less intuitive for AI
+- Bitwig's Control Surface API doesn't expose arrangement clips at all
+- Ableton's API has arrangement access, but asymmetric support across DAWs is undesirable
+- The user arranges clips into songs - that's human creative territory
+
+**Implications:**
+- No arrangement clip creation, reading, or note manipulation
+- No Reaper support (Reaper lacks a clip launcher paradigm entirely)
+- MIDI/OSC alternatives were considered but rejected - not worth the complexity
+
+**Workflow:** AI generates clips in launcher slots → User arranges them into songs on timeline.
+
 ## Project Structure
 
 - `bitwig-extension/` - Java extension for Bitwig Studio (TCP server on port 8181)

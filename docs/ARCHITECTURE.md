@@ -206,6 +206,10 @@ Real-world usage has shown the essential feature set:
 ## Future Enhancements
 
 **Later:**
-- Arrangement timeline operations
 - Device/plugin parameter control
 - Audio clip support
+
+## Out of Scope
+
+- **Arrangement view** - Bitwig API doesn't expose it; session view is better suited for AI workflows anyway
+- **Reaper** - No clip launcher paradigm; would require MIDI/OSC which adds complexity for marginal benefit

@@ -168,11 +168,10 @@ That's it. Claude can now see what's in your clips and create new musical conten
 |-----|--------|-------|
 | **Bitwig Studio** | ✅ Ready | Full support via Java extension |
 | **Ableton Live** | ✅ Ready | Full support via Python Remote Script |
-| **Reaper** | Planned | Lua ReaScript in the works |
 
 ## Current Limitations
 
-**Clip Launcher / Session View only.** This works with clips in the session/launcher view. Arrangement view and timeline editing aren't supported yet.
+**Clip Launcher / Session View only.** This works with clips in the session/launcher view. Arrangement view is intentionally out of scope — the discrete clip paradigm is better suited for AI-assisted workflows, and you're the one who arranges clips into songs.
 
 **MIDI only.** Audio clips, automation, and mixing are outside the current scope.
 
