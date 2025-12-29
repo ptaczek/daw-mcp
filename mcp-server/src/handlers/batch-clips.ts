@@ -202,6 +202,15 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<Batch
   const cursorTrack = cursor.trackIndex;  // 0-based internal
   let cursorSlot = cursor.slotIndex;       // 0-based internal
 
+  // Get scene count to validate cursor position
+  const sceneCountResult = await dawManager.send('clip.getSceneCount', {}, daw) as { sceneCount: number };
+  const sceneCount = sceneCountResult.sceneCount;
+
+  // Reset cursor to 0 if it points beyond existing scenes (stale cursor edge case)
+  if (cursorSlot >= sceneCount) {
+    cursorSlot = 0;
+  }
+
   // If no clips array or empty, create one clip at first empty slot from cursor
   if (!clips || clips.length === 0) {
     const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, cursorTrack, cursorSlot, 1);

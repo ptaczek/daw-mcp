@@ -2,7 +2,7 @@
 
 JSON-RPC 2.0 protocol over TCP for communication between the MCP server and DAW extensions.
 
-> **Version 0.8.0** - Core MIDI note manipulation and scene operations fully implemented. Auto-scene-creation ensures clips can always be created even when no empty slots exist.
+> **Version 0.8.1** - Core MIDI note manipulation and scene operations fully implemented. Auto-scene-creation ensures clips can always be created even when no empty slots exist.
 
 ## Transport
 
