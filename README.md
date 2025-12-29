@@ -94,6 +94,10 @@ Then in Bitwig: **Settings → Controllers → + Add Controller → search "Bitw
 
 You should see: *"Bitwig MCP Bridge started on port 8181"*
 
+> **Windows Firewall Note:** On first load, Windows Defender may ask to allow Bitwig Studio network access. The extension uses a local TCP connection (localhost only), so select **"Private networks"** and click **"Allow access"**.
+>
+> ![Windows Defender Firewall dialog](docs/media/windows-defender-dialog.png)
+
 #### Ableton Live
 
 Copy the entire `AbletonMCP` folder to your Remote Scripts folder:
