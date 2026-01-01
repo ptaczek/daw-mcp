@@ -135,9 +135,9 @@ Both extensions and the MCP server read from a shared config file:
 ```json
 {
   "defaultDaw": "bitwig",
+  "gridResolution": 16,
   "bitwig": {
     "port": 8181,
-    "gridResolution": 16,
     "cursorClipLengthBeats": 128,
     "scenes": 128
   },
@@ -155,9 +155,9 @@ Both extensions and the MCP server read from a shared config file:
 }
 ```
 
-### Bitwig Grid Configuration
+### Grid Resolution
 
-Bitwig's Control Surface API uses integer step positions. The `gridResolution` determines note positioning precision:
+The global `gridResolution` setting affects both DAWs:
 
 | gridResolution | stepSize | Musical Value |
 |----------------|----------|---------------|
@@ -170,7 +170,9 @@ Bitwig's Control Surface API uses integer step positions. The `gridResolution` d
 - `stepSize = 4 / gridResolution`
 - `clipSteps = cursorClipLengthBeats × (gridResolution / 4)`
 
-**Note:** Ableton supports arbitrary float positioning natively, so `gridResolution` only applies to Bitwig. The MCP server quantizes note positions when writing to Bitwig.
+**Per-DAW behavior:**
+- **Bitwig:** Notes are quantized to the grid (API limitation). The step size determines note positioning precision.
+- **Ableton:** Notes can be placed at arbitrary positions. The grid is used only for `get_clip_stats` calculations (`beatGrid` and `density`).
 
 **Defaults:** If config file is missing, all defaults are used. If a section is missing, that section uses defaults. Tools not listed default to enabled.
 

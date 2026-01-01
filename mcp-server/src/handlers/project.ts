@@ -4,7 +4,7 @@
 
 import { HandlerContext, ToolResult, successResult, errorResult } from './types.js';
 import { DAWClientManager } from '../daw-client.js';
-import { Config, getBitwigStepSize } from '../config.js';
+import { Config, getStepSize } from '../config.js';
 
 /**
  * Handle get_daws - discover connected DAWs.
@@ -20,13 +20,15 @@ export async function handleGetDaws(
     const defaultDaw = connections.find(c => c.isDefault);
 
     // Add grid info per DAW
-    const stepSize = getBitwigStepSize(config);
+    // Bitwig: grid enforced (API quantizes notes)
+    // Ableton: grid is null (arbitrary note positioning supported)
+    const stepSize = getStepSize(config);
     const dawsWithGrid = connections.map(c => ({
       ...c,
       grid: c.daw === 'bitwig' ? {
-        resolution: config.bitwig.gridResolution,
+        resolution: config.gridResolution,
         stepSize: stepSize,
-        unit: `1/${config.bitwig.gridResolution}th note`
+        unit: `1/${config.gridResolution}th note`
       } : null  // Ableton supports arbitrary positioning
     }));
 

@@ -131,7 +131,7 @@ batch_set_notes({daw: "bitwig", notes: [...]})
 | Tracks | `list_tracks` |
 | Clips | `batch_list_clips`, `batch_create_clips`, `batch_delete_clips`, `set_clip_length` |
 | MIDI Notes | `batch_get_notes`, `batch_set_notes`, `batch_clear_notes` |
-| Analysis | `get_clip_stats` (includes Tonal.js chord/scale detection) |
+| Analysis | `get_clip_stats` (includes Tonal.js chord/scale detection, grid detection with confidence) |
 | Generative | `batch_create_euclid_pattern` |
 
 ### Optional Tools (disabled by default)
@@ -159,7 +159,7 @@ Shared config file for all components:
 | macOS | `~/Library/Application Support/daw-mcp/config.json` |
 | Windows | `%APPDATA%\daw-mcp\config.json` |
 
-See `example-config.json` for all options.
+See `docs/example-config.json` for all options.
 
 ## Feature Parity
 

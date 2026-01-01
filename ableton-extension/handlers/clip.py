@@ -138,7 +138,7 @@ class ClipHandler(BaseHandler):
             return {'notes': [], 'count': 0}
 
         if not notes:
-            return {'notes': [], 'count': 0}
+            return {'notes': [], 'count': 0, 'clipLength': float(clip.length)}
 
         # Always return object format - MCP server handles lean transformation
         # Velocity normalized to 0.0-1.0 for consistency with Bitwig
@@ -157,7 +157,7 @@ class ClipHandler(BaseHandler):
             except Exception as e:
                 logger.warning("Error reading note: %s (note=%s)", e, note)
 
-        return {'notes': note_list, 'count': len(note_list)}
+        return {'notes': note_list, 'count': len(note_list), 'clipLength': float(clip.length)}
 
     def handle_clearAllNotes(self, params):
         """Clear all notes from a clip."""

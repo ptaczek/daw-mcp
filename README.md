@@ -237,13 +237,11 @@ For custom settings, create a config file:
 ```json
 {
   "defaultDaw": "bitwig",
-  "bitwig": {
-    "gridResolution": 16
-  }
+  "gridResolution": 16
 }
 ```
 
-The `gridResolution` controls note precision in Bitwig (16 = 1/16th notes). Ableton supports arbitrary positioning natively.
+The `gridResolution` controls note precision (16 = 1/16th notes). For Bitwig, this affects note quantization. For Ableton, it's used for clip statistics (beatGrid, density) since Ableton supports arbitrary note positioning.
 
 See `config.example.json` in the release for all options.
 

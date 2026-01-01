@@ -301,6 +301,7 @@ public class ClipHandler {
         JsonObject result = new JsonObject();
         result.add("notes", notes);
         result.addProperty("count", notes.size());
+        result.addProperty("clipLength", clipLengthBeats);
         return result;
     }
 

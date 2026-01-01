@@ -7,10 +7,14 @@ export interface Config {
   // Default DAW to use when not specified
   defaultDaw: DAWType;
 
+  // Global grid resolution (affects both DAWs)
+  // Bitwig: used for note quantization (API limitation)
+  // Ableton: used for clip stats bucketing
+  gridResolution: number;  // 16 = 1/16th notes, 32 = 1/32nd notes
+
   // Per-DAW configuration
   bitwig: {
     port: number;
-    gridResolution: number;        // Musical note value: 16 = 1/16th notes
     cursorClipLengthBeats: number; // Cursor clip length in beats
     scenes: number;                // Scene count for clip launcher
   };
@@ -30,9 +34,9 @@ export interface Config {
 
 const DEFAULTS: Config = {
   defaultDaw: 'bitwig',
+  gridResolution: 16,  // 1/16th notes (global for both DAWs)
   bitwig: {
     port: 8181,
-    gridResolution: 16,        // 1/16th notes
     cursorClipLengthBeats: 128, // 32 bars × 4 beats
     scenes: 128,
   },
@@ -82,9 +86,9 @@ export function loadConfig(): Config {
 
     const config: Config = {
       defaultDaw: parsed.defaultDaw ?? DEFAULTS.defaultDaw,
+      gridResolution: parsed.gridResolution ?? DEFAULTS.gridResolution,
       bitwig: {
         port: parsed.bitwig?.port ?? DEFAULTS.bitwig.port,
-        gridResolution: parsed.bitwig?.gridResolution ?? DEFAULTS.bitwig.gridResolution,
         cursorClipLengthBeats: parsed.bitwig?.cursorClipLengthBeats ?? DEFAULTS.bitwig.cursorClipLengthBeats,
         scenes: parsed.bitwig?.scenes ?? DEFAULTS.bitwig.scenes,
       },
@@ -98,7 +102,7 @@ export function loadConfig(): Config {
       tools: parsed.tools ?? {},
     };
 
-    console.error(`[Config] Loaded: defaultDaw=${config.defaultDaw}, bitwig.gridResolution=${config.bitwig.gridResolution}`);
+    console.error(`[Config] Loaded: defaultDaw=${config.defaultDaw}, gridResolution=${config.gridResolution}`);
     return config;
   } catch (error) {
     console.error('[Config] Failed to load config:', error);
@@ -148,10 +152,10 @@ function getConfigFilePath(): string {
 }
 
 /**
- * Get the step size in beats for Bitwig grid.
+ * Get the step size in beats for the configured grid resolution.
  * Formula: stepSize = 4 / gridResolution
  * Example: gridResolution=16 -> stepSize=0.25 (1/16th note)
  */
-export function getBitwigStepSize(config: Config): number {
-  return 4 / config.bitwig.gridResolution;
+export function getStepSize(config: Config): number {
+  return 4 / config.gridResolution;
 }

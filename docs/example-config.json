@@ -1,9 +1,9 @@
 {
   "defaultDaw": "bitwig",
+  "gridResolution": 16,
 
   "bitwig": {
     "port": 8181,
-    "gridResolution": 16,
     "cursorClipLengthBeats": 128,
     "scenes": 128
   },
