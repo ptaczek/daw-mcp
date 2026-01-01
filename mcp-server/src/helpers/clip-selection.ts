@@ -7,18 +7,6 @@ import { DAWClientManager, DAWType } from '../daw-client.js';
 import { Config } from '../config.js';
 import { toInternal } from './indices.js';
 
-/** Extract DAW from args (returns default if not specified) */
-export function extractDaw(
-  args: Record<string, unknown>,
-  dawManager: DAWClientManager
-): DAWType {
-  const daw = args.daw as string | undefined;
-  if (daw === 'bitwig' || daw === 'ableton') {
-    return daw;
-  }
-  return dawManager.getDefaultDaw();
-}
-
 /**
  * Resolve clip indices (use provided or get from cursor selection).
  * User input is 1-based, returns 0-based internal indices.

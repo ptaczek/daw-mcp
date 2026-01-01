@@ -41,7 +41,6 @@
     "transpose_range": false,
     "batch_create_tracks": false,
     "batch_delete_tracks": false,
-    "batch_set_track_properties": false,
-    "transport_set_position": false
+    "batch_set_track_properties": false
   }
 }

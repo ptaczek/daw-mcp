@@ -1,5 +1,6 @@
 /**
  * MCP Server setup and request routing.
+ * Uses registry pattern for tool handlers.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -8,20 +9,56 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { DAWClientManager, DAWType } from './daw-client.js';
-import { Config, isToolEnabled, getBitwigStepSize } from './config.js';
+import { Config, isToolEnabled } from './config.js';
 import { createToolDefinitions } from './tools/index.js';
-import {
-  toInternal, toUser, extractDaw, getCommand
-} from './helpers/index.js';
-import {
-  HandlerContext, BatchResult,
-  handleBatchSetNotes, handleBatchMoveNotes, handleBatchClearNotes, handleBatchSetNoteProperties,
-  handleBatchGetNotes, handleBatchListClips, handleBatchCreateClips, handleBatchDeleteClips,
-  handleBatchCreateTracks, handleBatchSetTrackProperties, handleBatchDeleteTracks,
-  handleGetClipStats,
-  handleBatchCreateEuclidPattern,
-  handleTransposeRange, handleBatchOperations
-} from './handlers/index.js';
+import { resolveDaw } from './helpers/daw-resolution.js';
+import { HandlerContext, ToolResult, errorResult } from './handlers/types.js';
+
+// Import handlers from domain modules
+import { handleGetDaws, handleGetProjectInfo } from './handlers/project.js';
+import { handleListTracks, handleBatchCreateTracks, handleBatchSetTrackProperties, handleBatchDeleteTracks } from './handlers/tracks.js';
+import { handleBatchListClips, handleBatchCreateClips, handleBatchDeleteClips, handleSetClipLength } from './handlers/clips.js';
+import { handleBatchGetNotes, handleBatchSetNotes, handleBatchClearNotes, handleBatchMoveNotes, handleBatchSetNoteProperties, handleTransposeClip, handleTransposeRange } from './handlers/notes.js';
+import { handleGetClipStats } from './handlers/analysis.js';
+import { handleBatchCreateEuclidPattern } from './handlers/euclid.js';
+
+/** Handler type for tools that need HandlerContext */
+type ToolHandler = (ctx: HandlerContext) => Promise<ToolResult>;
+
+/** Build the tool registry */
+function createToolRegistry(): Map<string, ToolHandler> {
+  return new Map<string, ToolHandler>([
+    // Project (get_daws handled separately - doesn't need context)
+    ['get_project_info', handleGetProjectInfo],
+
+    // Tracks
+    ['list_tracks', handleListTracks],
+    ['batch_create_tracks', handleBatchCreateTracks],
+    ['batch_set_track_properties', handleBatchSetTrackProperties],
+    ['batch_delete_tracks', handleBatchDeleteTracks],
+
+    // Clips
+    ['batch_list_clips', handleBatchListClips],
+    ['batch_create_clips', handleBatchCreateClips],
+    ['batch_delete_clips', handleBatchDeleteClips],
+    ['set_clip_length', handleSetClipLength],
+
+    // Notes
+    ['batch_get_notes', handleBatchGetNotes],
+    ['batch_set_notes', handleBatchSetNotes],
+    ['batch_clear_notes', handleBatchClearNotes],
+    ['batch_move_notes', handleBatchMoveNotes],
+    ['batch_set_note_properties', handleBatchSetNoteProperties],
+    ['transpose_clip', handleTransposeClip],
+    ['transpose_range', handleTransposeRange],
+
+    // Analysis
+    ['get_clip_stats', handleGetClipStats],
+
+    // Generative
+    ['batch_create_euclid_pattern', handleBatchCreateEuclidPattern],
+  ]);
+}
 
 /** Create and configure the MCP server */
 export function createServer(config: Config, dawManager: DAWClientManager): Server {
@@ -38,6 +75,7 @@ export function createServer(config: Config, dawManager: DAWClientManager): Serv
   );
 
   const tools = createToolDefinitions(config);
+  const toolRegistry = createToolRegistry();
 
   // Handle list tools request (filter by config)
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -48,193 +86,47 @@ export function createServer(config: Config, dawManager: DAWClientManager): Serv
   // Handle tool calls
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const safeArgs = (args ?? {}) as Record<string, unknown>;
 
-    // Handle get_daws - special tool that checks all DAW connections
+    // Special case: get_daws doesn't need DAW resolution (it IS the discovery)
     if (name === 'get_daws') {
       return handleGetDaws(config, dawManager);
     }
 
-    const daw = extractDaw(args as Record<string, unknown>, dawManager);
+    // Look up handler in registry
+    const handler = toolRegistry.get(name);
+    if (!handler) {
+      return errorResult(`Unknown tool: ${name}`);
+    }
 
     try {
-      // Check for batch operations first
-      const batchResult = await handleBatchOperation(name, args as Record<string, unknown>, config, dawManager, daw);
-      if (batchResult !== null) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(batchResult, null, 2),
-            },
-          ],
-        };
-      }
+      // Resolve which DAW to use (probes connections, auto-selects single DAW)
+      const daw = await resolveDaw(
+        safeArgs.daw as DAWType | undefined,
+        dawManager,
+        config.defaultDaw
+      );
 
-      // Execute the command
-      const command = getCommand(name);
-      const result = await dawManager.send(command, args as Record<string, unknown>, daw);
-
-      // Transform responses for user-facing output
-      let output = result;
-
-      if (name === 'list_tracks') {
-        // Convert track indices to 1-based
-        const resultObj = result as { tracks?: Array<{ index: number; [key: string]: unknown }> } | Array<{ index: number; [key: string]: unknown }>;
-        const tracks = Array.isArray(resultObj) ? resultObj : (resultObj.tracks ?? []);
-        output = tracks.map(track => ({
-          ...track,
-          index: toUser(track.index)
-        }));
-      }
-
-      return {
-        content: [
-          {
-            type: 'text',
-            text: JSON.stringify(output, null, 2),
-          },
-        ],
-      };
+      // Build context and execute handler
+      const ctx: HandlerContext = { dawManager, config, daw, args: safeArgs };
+      return await handler(ctx);
     } catch (error) {
-      return handleError(error, daw, config, dawManager);
+      return handleError(error, safeArgs.daw as DAWType | undefined, config, dawManager);
     }
   });
 
   return server;
 }
 
-/** Handle get_daws tool */
-async function handleGetDaws(config: Config, dawManager: DAWClientManager) {
-  try {
-    const connections = await dawManager.checkConnections();
-    const connectedDaws = connections.filter(c => c.connected);
-    const defaultDaw = connections.find(c => c.isDefault);
-
-    // Add grid info per DAW
-    const stepSize = getBitwigStepSize(config);
-    const dawsWithGrid = connections.map(c => ({
-      ...c,
-      grid: c.daw === 'bitwig' ? {
-        resolution: config.bitwig.gridResolution,
-        stepSize: stepSize,
-        unit: `1/${config.bitwig.gridResolution}th note`
-      } : null  // Ableton supports arbitrary positioning
-    }));
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: JSON.stringify({
-            daws: dawsWithGrid,
-            summary: {
-              connectedCount: connectedDaws.length,
-              connectedDaws: connectedDaws.map(c => c.daw),
-              defaultDaw: defaultDaw?.daw,
-              hint: connectedDaws.length > 1
-                ? 'Multiple DAWs connected. Use "daw" parameter to target a specific DAW (e.g., daw: "ableton").'
-                : connectedDaws.length === 1
-                ? `Only ${connectedDaws[0].daw} is connected. The "daw" parameter is optional.`
-                : 'No DAWs connected. Please start Bitwig Studio or Ableton Live with the extension enabled.'
-            }
-          }, null, 2),
-        },
-      ],
-    };
-  } catch (error) {
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Error checking DAW connections: ${error instanceof Error ? error.message : String(error)}`,
-        },
-      ],
-    };
-  }
-}
-
-/** Route to appropriate batch handler */
-async function handleBatchOperation(
-  name: string,
-  args: Record<string, unknown>,
-  config: Config,
-  dawManager: DAWClientManager,
-  daw: DAWType
-): Promise<BatchResult | null> {
-  const ctx: HandlerContext = { dawManager, config, daw, args };
-
-  switch (name) {
-    case 'batch_set_notes':
-      return handleBatchSetNotes(ctx);
-
-    case 'batch_move_notes':
-      return handleBatchMoveNotes(ctx);
-
-    case 'batch_clear_notes':
-      return handleBatchClearNotes(ctx);
-
-    case 'batch_set_note_properties':
-      return handleBatchSetNoteProperties(ctx);
-
-    case 'transpose_range':
-      return handleTransposeRange(ctx);
-
-    case 'batch_operations':
-      return handleBatchOperations(ctx);
-
-    case 'get_clip_stats':
-      return handleGetClipStats(ctx);
-
-    case 'batch_create_euclid_pattern':
-      return handleBatchCreateEuclidPattern(ctx);
-
-    case 'batch_get_notes':
-      return handleBatchGetNotes(ctx);
-
-    case 'batch_list_clips':
-      return handleBatchListClips(ctx);
-
-    case 'batch_create_clips':
-      return handleBatchCreateClips(ctx);
-
-    case 'batch_delete_clips':
-      return handleBatchDeleteClips(ctx);
-
-    case 'batch_create_tracks':
-      return handleBatchCreateTracks(ctx);
-
-    case 'batch_set_track_properties':
-      return handleBatchSetTrackProperties(ctx);
-
-    case 'batch_delete_tracks':
-      return handleBatchDeleteTracks(ctx);
-
-    // Handle tools with optional clip selection
-    case 'transpose_clip':
-    case 'set_clip_length':
-      // Convert 1-based user indices to 0-based internal indices
-      if (args.trackIndex !== undefined) {
-        args.trackIndex = toInternal(args.trackIndex as number);
-      }
-      if (args.slotIndex !== undefined) {
-        args.slotIndex = toInternal(args.slotIndex as number);
-      }
-      return null;  // Let standard command handler process it
-
-    default:
-      return null;
-  }
-}
-
 /** Handle errors with helpful messages */
 function handleError(
   error: unknown,
-  daw: DAWType,
+  requestedDaw: DAWType | undefined,
   config: Config,
   dawManager: DAWClientManager
-) {
+): ToolResult {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  const targetDaw = daw ?? config.defaultDaw;
+  const targetDaw = requestedDaw ?? config.defaultDaw;
   const port = dawManager.getPort(targetDaw);
 
   // Check if it's a connection error
@@ -256,13 +148,5 @@ function handleError(
     };
   }
 
-  return {
-    content: [
-      {
-        type: 'text',
-        text: `Error: ${errorMessage}`,
-      },
-    ],
-    isError: true,
-  };
+  return errorResult(errorMessage);
 }

@@ -1,12 +1,35 @@
 /**
- * Batch track operation handlers.
+ * Track handlers: list_tracks, batch_create_tracks, batch_delete_tracks, batch_set_track_properties
  */
 
-import { HandlerContext, BatchResult } from './index.js';
+import { HandlerContext, ToolResult, successResult, errorResult } from './types.js';
 import { toInternal, toUser } from '../helpers/index.js';
 
+/** Handle list_tracks */
+export async function handleListTracks(ctx: HandlerContext): Promise<ToolResult> {
+  const { dawManager, daw } = ctx;
+
+  try {
+    const result = await dawManager.send('track.list', {}, daw) as {
+      tracks?: Array<{ index: number; [key: string]: unknown }>
+    } | Array<{ index: number; [key: string]: unknown }>;
+
+    const tracks = Array.isArray(result) ? result : (result.tracks ?? []);
+
+    // Convert indices to 1-based for user
+    const userTracks = tracks.map(track => ({
+      ...track,
+      index: toUser(track.index)
+    }));
+
+    return successResult(userTracks);
+  } catch (error) {
+    return errorResult(error instanceof Error ? error.message : String(error));
+  }
+}
+
 /** Handle batch_create_tracks */
-export async function handleBatchCreateTracks(ctx: HandlerContext): Promise<BatchResult> {
+export async function handleBatchCreateTracks(ctx: HandlerContext): Promise<ToolResult> {
   const { dawManager, daw, args } = ctx;
 
   const tracks = args.tracks as Array<{ type: string; name?: string; position?: number }>;
@@ -38,17 +61,17 @@ export async function handleBatchCreateTracks(ctx: HandlerContext): Promise<Batc
     }
   }
 
-  return {
+  return successResult({
     success: errors.length === 0,
     completed,
     failed: errors.length,
     createdIndices,
     ...(errors.length > 0 && { errors })
-  };
+  });
 }
 
 /** Handle batch_set_track_properties */
-export async function handleBatchSetTrackProperties(ctx: HandlerContext): Promise<BatchResult> {
+export async function handleBatchSetTrackProperties(ctx: HandlerContext): Promise<ToolResult> {
   const { dawManager, daw, args } = ctx;
 
   const tracks = args.tracks as Array<{
@@ -84,16 +107,16 @@ export async function handleBatchSetTrackProperties(ctx: HandlerContext): Promis
     }
   }
 
-  return {
+  return successResult({
     success: errors.length === 0,
     completed,
     failed: errors.length,
     ...(errors.length > 0 && { errors })
-  };
+  });
 }
 
 /** Handle batch_delete_tracks (delete in reverse order to preserve indices) */
-export async function handleBatchDeleteTracks(ctx: HandlerContext): Promise<BatchResult> {
+export async function handleBatchDeleteTracks(ctx: HandlerContext): Promise<ToolResult> {
   const { dawManager, daw, args } = ctx;
 
   const trackIndices = args.trackIndices as number[];
@@ -114,10 +137,10 @@ export async function handleBatchDeleteTracks(ctx: HandlerContext): Promise<Batc
     }
   }
 
-  return {
+  return successResult({
     success: errors.length === 0,
     completed,
     failed: errors.length,
     ...(errors.length > 0 && { errors })
-  };
+  });
 }

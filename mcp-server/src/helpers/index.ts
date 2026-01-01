@@ -4,10 +4,9 @@
 
 export { toInternal, toUser, quantizeForBitwig } from './indices.js';
 export {
-  extractDaw,
   resolveClipIndices,
   slotHasContent,
   findEmptySlots,
   selectClipIfNeeded
 } from './clip-selection.js';
-export { getCommand } from './command-map.js';
+export { resolveDaw } from './daw-resolution.js';

@@ -1,8 +1,8 @@
 /**
- * Clip statistics handler.
+ * Analysis handlers: get_clip_stats
  */
 
-import { HandlerContext, BatchResult } from './index.js';
+import { HandlerContext, ToolResult, successResult, errorResult } from './types.js';
 import { selectClipIfNeeded } from '../helpers/index.js';
 import { analyzeMusic, MusicAnalysis } from '../music-analysis.js';
 
@@ -86,12 +86,12 @@ export function computeClipStats(
 }
 
 /** Handle get_clip_stats */
-export async function handleGetClipStats(ctx: HandlerContext): Promise<BatchResult & Partial<ClipStats>> {
+export async function handleGetClipStats(ctx: HandlerContext): Promise<ToolResult> {
   const { dawManager, config, daw, args } = ctx;
 
-  await selectClipIfNeeded(dawManager, config, daw, args);
-
   try {
+    await selectClipIfNeeded(dawManager, config, daw, args);
+
     // Get notes from clip
     const notesResult = await dawManager.send('clip.getNotes', {}, daw) as {
       notes: Array<{ x: number; y: number; velocity: number; duration: number }>;
@@ -105,18 +105,8 @@ export async function handleGetClipStats(ctx: HandlerContext): Promise<BatchResu
     // Compute stats
     const stats = computeClipStats(notes, clipLength);
 
-    return {
-      success: true,
-      completed: 1,
-      failed: 0,
-      ...stats
-    };
-  } catch (e) {
-    return {
-      success: false,
-      completed: 0,
-      failed: 1,
-      errors: [{ index: 0, error: e instanceof Error ? e.message : String(e) }]
-    };
+    return successResult(stats);
+  } catch (error) {
+    return errorResult(error instanceof Error ? error.message : String(error));
   }
 }

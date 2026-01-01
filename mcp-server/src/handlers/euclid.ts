@@ -2,7 +2,7 @@
  * Euclidean rhythm pattern handler.
  */
 
-import { HandlerContext, BatchResult } from './index.js';
+import { HandlerContext, ToolResult, successResult, errorResult } from './types.js';
 import { toInternal, toUser, quantizeForBitwig } from '../helpers/index.js';
 import { patternsToNotes, EuclidPattern } from '../euclidean.js';
 
@@ -27,7 +27,7 @@ interface ClipResult {
 }
 
 /** Handle batch_create_euclid_pattern (multi-track, multi-clip) */
-export async function handleBatchCreateEuclidPattern(ctx: HandlerContext): Promise<BatchResult> {
+export async function handleBatchCreateEuclidPattern(ctx: HandlerContext): Promise<ToolResult> {
   const { dawManager, config, daw, args } = ctx;
 
   const tracks = args.tracks as TrackInput[];
@@ -143,11 +143,11 @@ export async function handleBatchCreateEuclidPattern(ctx: HandlerContext): Promi
     }
   }
 
-  return {
+  return successResult({
     success: euclidErrors.length === 0,
     completed: results.length,
     failed: euclidErrors.length,
     euclidClips: results,
     ...(euclidErrors.length > 0 && { euclidErrors })
-  };
+  });
 }

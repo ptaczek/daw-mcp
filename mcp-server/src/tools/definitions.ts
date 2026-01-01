@@ -39,19 +39,6 @@ export function createToolDefinitions(config: Config): Tool[] {
         required: []
       }
     },
-    {
-      name: 'transport_set_position',
-      description: 'Set playback position in beats',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          ...dawParam,
-          beats: { type: 'number', description: 'Position in beats from start' }
-        },
-        required: ['beats']
-      }
-    },
-
     // Track tools
     {
       name: 'list_tracks',
@@ -216,42 +203,6 @@ export function createToolDefinitions(config: Config): Tool[] {
         required: ['startStep', 'endStep', 'semitones']
       }
     },
-    {
-      name: 'batch_operations',
-      description: 'Execute multiple heterogeneous operations in sequence (set, move, clear, transpose_clip). Works on the clip currently selected in DAW\'s UI by default. Provide trackIndex/slotIndex to target a specific clip (adds brief selection delay).',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          ...dawParam,
-          trackIndex: { type: 'integer', description: 'Track number, 1-based (optional - uses DAW UI selection if omitted)' },
-          slotIndex: { type: 'integer', description: 'Clip slot number, 1-based (optional - uses DAW UI selection if omitted)' },
-          operations: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                action: {
-                  type: 'string',
-                  enum: ['set', 'move', 'clear', 'transpose_clip'],
-                  description: 'Operation type'
-                },
-                x: { type: 'integer', description: 'Step position (for set, move, clear)' },
-                y: { type: 'integer', description: 'MIDI note number (for set, move, clear)' },
-                dx: { type: 'integer', description: 'Steps to move (for move)' },
-                dy: { type: 'integer', description: 'Semitones to move (for move)' },
-                velocity: { type: 'integer', description: 'Velocity (for set)' },
-                duration: { type: 'number', description: 'Duration (for set)' },
-                semitones: { type: 'integer', description: 'Semitones (for transpose_clip)' }
-              },
-              required: ['action']
-            },
-            description: 'Array of operations to execute'
-          }
-        },
-        required: ['operations']
-      }
-    },
-
     // Batch clip operations
     {
       name: 'batch_get_notes',
