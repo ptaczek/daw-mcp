@@ -22,8 +22,8 @@ mkdir -p "$RELEASE_DIR"
 # 1. Build Bitwig extension
 echo "Building Bitwig extension..."
 cd bitwig-extension
-gradle build -q
-cp build/libs/*.bwextension "../$RELEASE_DIR/BitwigMCP.bwextension"
+gradle clean build -q
+cp "build/libs/daw-mcp-${VERSION}.bwextension" "../$RELEASE_DIR/BitwigMCP.bwextension"
 cd ..
 
 # 2. Bundle MCP server
