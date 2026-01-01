@@ -2,8 +2,13 @@ plugins {
     id 'java'
 }
 
+import groovy.json.JsonSlurper
+
+// Read version from mcp-server/package.json (single source of truth)
+def packageJson = new JsonSlurper().parse(file('../mcp-server/package.json'))
+
 group = 'com.pxaudio'
-version = '1.0.0'
+version = packageJson.version
 
 java {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -40,9 +45,28 @@ jar {
     }
 }
 
-// Create extension directory structure
+// Platform-specific Bitwig extensions directory
+def getBitwigExtensionsDir() {
+    def userHome = System.getProperty('user.home')
+    def os = System.getProperty('os.name').toLowerCase()
+
+    if (os.contains('win')) {
+        return "${userHome}/Documents/Bitwig Studio/Extensions"
+    } else if (os.contains('mac')) {
+        return "${userHome}/Documents/Bitwig Studio/Extensions"
+    } else {
+        // Linux
+        return "${userHome}/Bitwig Studio/Extensions"
+    }
+}
+
 task copyExtension(type: Copy) {
     dependsOn jar
     from jar.outputs.files
-    into "${System.getProperty('user.home')}/Documents/Bitwig Studio/Extensions"
+    into getBitwigExtensionsDir()
+
+    doLast {
+        println "Copied extension to: ${getBitwigExtensionsDir()}"
+        println "Version: ${version}"
+    }
 }

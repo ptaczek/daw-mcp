@@ -119,7 +119,7 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         String name = params.get("name").getAsString();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.name().set(name);
         return successResponse();
     }
@@ -128,7 +128,7 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         double volume = params.get("volume").getAsDouble();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.volume().set(Math.max(0, Math.min(1, volume)));
         return successResponse();
     }
@@ -137,7 +137,7 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         double pan = params.get("pan").getAsDouble();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.pan().set(Math.max(0, Math.min(1, pan)));  // 0 = left, 0.5 = center, 1 = right
         return successResponse();
     }
@@ -146,7 +146,7 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         boolean mute = params.get("mute").getAsBoolean();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.mute().set(mute);
         return successResponse();
     }
@@ -155,7 +155,7 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         boolean solo = params.get("solo").getAsBoolean();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.solo().set(solo);
         return successResponse();
     }
@@ -164,14 +164,14 @@ public class TrackHandler {
         int index = getTrackIndex(params);
         boolean arm = params.get("arm").getAsBoolean();
 
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.arm().set(arm);
         return successResponse();
     }
 
     private JsonElement selectTrack(JsonObject params) {
         int index = getTrackIndex(params);
-        Track track = extension.getTrackBank().getItemAt(index);
+        Track track = getValidatedTrack(index);
         track.selectInMixer();
         return successResponse();
     }
@@ -181,6 +181,17 @@ public class TrackHandler {
             throw new IllegalArgumentException("Missing 'index' parameter");
         }
         return params.get("index").getAsInt();
+    }
+
+    /**
+     * Get track at index with existence validation.
+     */
+    private Track getValidatedTrack(int index) {
+        Track track = extension.getTrackBank().getItemAt(index);
+        if (!track.exists().get()) {
+            throw new IllegalArgumentException("Track does not exist at index: " + index);
+        }
+        return track;
     }
 
     private JsonObject trackToJson(Track track, int index) {

@@ -124,7 +124,15 @@ public class MCPServer {
             JsonElement result = dispatcher.dispatch(method, params);
             response.add("result", result);
         } catch (IllegalArgumentException e) {
-            return createError(response, -32601, "Method not found: " + method);
+            String message = e.getMessage();
+            // Check if this is a method-not-found error vs parameter validation
+            // Method-not-found patterns: "Unknown * action:", "Unknown category:", "Invalid method format:"
+            if (message != null && (message.contains(" action:") || message.contains("category:") || message.startsWith("Invalid method"))) {
+                return createError(response, -32601, "Method not found: " + method);
+            } else {
+                // Parameter validation error
+                return createError(response, -32602, "Invalid params: " + message);
+            }
         } catch (Exception e) {
             host.errorln("Error executing " + method + ": " + e.getMessage());
             return createError(response, -32603, "Internal error: " + e.getMessage());
