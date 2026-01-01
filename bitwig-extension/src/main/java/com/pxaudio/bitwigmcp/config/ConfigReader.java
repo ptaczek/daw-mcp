@@ -52,11 +52,13 @@ public class ConfigReader {
                 return;
             }
 
+            // Read global gridResolution (applies to both DAWs)
+            if (root.has("gridResolution")) gridResolution = root.get("gridResolution").getAsInt();
+
             // Read from bitwig section
             if (root.has("bitwig")) {
                 JsonObject bitwig = root.getAsJsonObject("bitwig");
                 if (bitwig.has("port")) port = bitwig.get("port").getAsInt();
-                if (bitwig.has("gridResolution")) gridResolution = bitwig.get("gridResolution").getAsInt();
                 if (bitwig.has("cursorClipLengthBeats")) cursorClipLengthBeats = bitwig.get("cursorClipLengthBeats").getAsInt();
                 if (bitwig.has("scenes")) scenes = bitwig.get("scenes").getAsInt();
             }

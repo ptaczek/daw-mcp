@@ -4,7 +4,7 @@
  * Internal DAW API uses 0-based indexing (Track 0, Slot 0)
  */
 
-import { getBitwigStepSize, Config } from '../config.js';
+import { getStepSize, Config } from '../config.js';
 
 /** Convert 1-based user index to 0-based internal index */
 export function toInternal(index: number): number {
@@ -17,10 +17,10 @@ export function toUser(index: number): number {
 }
 
 /**
- * Quantize a beat value to Bitwig's grid.
- * Only used when sending notes to Bitwig.
+ * Quantize a beat value to the configured grid.
+ * Used when sending notes to Bitwig (API limitation).
  */
 export function quantizeForBitwig(beats: number, config: Config): number {
-  const stepSize = getBitwigStepSize(config);
+  const stepSize = getStepSize(config);
   return Math.round(beats / stepSize) * stepSize;
 }

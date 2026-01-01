@@ -2,7 +2,7 @@
 
 JSON-RPC 2.0 protocol over TCP for communication between the MCP server and DAW extensions.
 
-> **Version 0.8.1** - Core MIDI note manipulation and scene operations fully implemented. Auto-scene-creation ensures clips can always be created even when no empty slots exist.
+> **Version 0.8.4** - Core MIDI note manipulation and scene operations fully implemented. Auto-scene-creation ensures clips can always be created even when no empty slots exist. Clip stats now include grid detection with confidence scoring.
 
 ## Transport
 
@@ -519,10 +519,12 @@ Get MIDI notes from a clip.
 ```json
 {
   "notes": [[0, 60, 100, 0.5], [4, 64, 80, 0.25]],
-  "count": 2
+  "count": 2,
+  "clipLength": 4.0
 }
 ```
 Format: `[x (step), y (pitch), velocity (0-127), duration (beats)]`
+- `clipLength`: Clip length in beats (used for stats calculations)
 
 **Result (verbose):**
 ```json
@@ -542,7 +544,8 @@ Format: `[x (step), y (pitch), velocity (0-127), duration (beats)]`
       "muted": false
     }
   ],
-  "count": 1
+  "count": 1,
+  "clipLength": 4.0
 }
 ```
 
