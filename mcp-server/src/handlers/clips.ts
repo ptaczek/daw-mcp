@@ -122,30 +122,40 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<ToolR
     const createdClips: Array<{ trackIndex: number; slotIndex: number; lengthInBeats: number; name?: string }> = [];
     let completed = 0;
 
-    // Get cursor position for Mode A (auto-find empty slots)
-    const cursor = await resolveClipIndices(dawManager, daw, undefined, undefined);
-    const cursorTrack = cursor.trackIndex;  // 0-based internal
-    let cursorSlot = cursor.slotIndex;       // 0-based internal
+    // Lazy cursor fetching - only query when needed for Mode A (auto-find empty slots)
+    let cursorTrack: number | null = null;
+    let cursorSlot: number | null = null;
+    let sceneCount: number | null = null;
 
-    // Get scene count to validate cursor position
-    const sceneCountResult = await dawManager.send('clip.getSceneCount', {}, daw) as { sceneCount: number };
-    const sceneCount = sceneCountResult.sceneCount;
+    async function ensureCursor(): Promise<{ trackIndex: number; slotIndex: number; sceneCount: number }> {
+      if (cursorTrack === null) {
+        const cursor = await resolveClipIndices(dawManager, daw, undefined, undefined);
+        cursorTrack = cursor.trackIndex;  // 0-based internal
+        cursorSlot = cursor.slotIndex;    // 0-based internal
 
-    // Reset cursor to 0 if it points beyond existing scenes (stale cursor edge case)
-    if (cursorSlot >= sceneCount) {
-      cursorSlot = 0;
+        // Get scene count to validate cursor position
+        const sceneCountResult = await dawManager.send('clip.getSceneCount', {}, daw) as { sceneCount: number };
+        sceneCount = sceneCountResult.sceneCount;
+
+        // Reset cursor to 0 if it points beyond existing scenes (stale cursor edge case)
+        if (cursorSlot >= sceneCount) {
+          cursorSlot = 0;
+        }
+      }
+      return { trackIndex: cursorTrack, slotIndex: cursorSlot!, sceneCount: sceneCount! };
     }
 
     // If no clips array or empty, create one clip at first empty slot from cursor
     if (!clips || clips.length === 0) {
-      const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, cursorTrack, cursorSlot, 1);
+      const cursor = await ensureCursor();
+      const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, cursor.trackIndex, cursor.slotIndex, 1);
       if (emptyResult.found === 0) {
         return errorResult(`No empty slots available even after attempting to create scenes. Scene count: ${emptyResult.sceneCount}`);
       }
       const targetSlot = emptyResult.emptySlots[0];
       try {
-        await dawManager.send('clip.create', { trackIndex: cursorTrack, slotIndex: targetSlot, lengthInBeats: 4 }, daw);
-        createdClips.push({ trackIndex: toUser(cursorTrack), slotIndex: toUser(targetSlot), lengthInBeats: 4 });
+        await dawManager.send('clip.create', { trackIndex: cursor.trackIndex, slotIndex: targetSlot, lengthInBeats: 4 }, daw);
+        createdClips.push({ trackIndex: toUser(cursor.trackIndex), slotIndex: toUser(targetSlot), lengthInBeats: 4 });
         completed++;
       } catch (e) {
         errors.push({ index: 0, error: e instanceof Error ? e.message : String(e) });
@@ -167,20 +177,60 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<ToolR
       const lengthInBeats = clip.lengthInBeats ?? 4;
 
       try {
-        // Determine track (use provided or cursor track)
-        const trackIndex = clip.trackIndex !== undefined ? toInternal(clip.trackIndex) : cursorTrack;
+        // Mode B: Both trackIndex and slotIndex provided - no cursor needed
+        if (clip.trackIndex !== undefined && clip.slotIndex !== undefined) {
+          const trackIndex = toInternal(clip.trackIndex);
+          const slotIndex = toInternal(clip.slotIndex);
+          const hasContent = await slotHasContent(dawManager, daw, trackIndex, slotIndex);
+
+          if (hasContent && !overwrite) {
+            errors.push({
+              index: i,
+              error: `Slot ${clip.slotIndex} on track ${clip.trackIndex} has content. Use overwrite=true to replace.`
+            });
+            continue;
+          }
+
+          if (hasContent && overwrite) {
+            // Delete existing clip first
+            await dawManager.send('clip.delete', { trackIndex, slotIndex }, daw);
+          }
+
+          // Create the clip
+          await dawManager.send('clip.create', { trackIndex, slotIndex, lengthInBeats }, daw);
+
+          // Set clip name if provided
+          if (clip.name) {
+            await dawManager.send('clip.select', { trackIndex, slotIndex }, daw);
+            await new Promise(resolve => setTimeout(resolve, config.mcp.selectionDelayMs));
+            await dawManager.send('clip.setName', { name: clip.name }, daw);
+          }
+
+          createdClips.push({
+            trackIndex: clip.trackIndex,
+            slotIndex: clip.slotIndex,
+            lengthInBeats,
+            ...(clip.name && { name: clip.name })
+          });
+          completed++;
+          continue;
+        }
+
+        // Mode A or mixed: Need cursor for track and/or slot
+        const cursor = await ensureCursor();
+        const trackIndex = clip.trackIndex !== undefined ? toInternal(clip.trackIndex) : cursor.trackIndex;
 
         let slotIndex: number;
 
         if (clip.slotIndex !== undefined) {
-          // Mode B: Targeted creation - validate slot is empty
+          // Explicit slot but cursor track
           slotIndex = toInternal(clip.slotIndex);
           const hasContent = await slotHasContent(dawManager, daw, trackIndex, slotIndex);
 
           if (hasContent && !overwrite) {
             errors.push({
               index: i,
-              error: `Slot ${clip.slotIndex} on track ${clip.trackIndex ?? toUser(cursorTrack)} has content. Use overwrite=true to replace.`
+              error: `Slot ${clip.slotIndex} on track ${clip.trackIndex ?? toUser(cursor.trackIndex)} has content. Use overwrite=true to replace.`
             });
             continue;
           }
@@ -191,11 +241,11 @@ export async function handleBatchCreateClips(ctx: HandlerContext): Promise<ToolR
           }
         } else {
           // Mode A: Auto-find empty slot from cursor position (with auto-scene-creation)
-          const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, trackIndex, cursorSlot, 1);
+          const emptyResult = await findEmptySlotsWithAutoCreate(dawManager, daw, trackIndex, cursorSlot!, 1);
           if (emptyResult.found === 0) {
             errors.push({
               index: i,
-              error: `No empty slots available from position ${toUser(cursorSlot)} even after attempting to create scenes. Scene count: ${emptyResult.sceneCount}`
+              error: `No empty slots available from position ${toUser(cursorSlot!)} even after attempting to create scenes. Scene count: ${emptyResult.sceneCount}`
             });
             continue;
           }
